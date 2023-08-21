@@ -1,0 +1,2 @@
+# Coveralls
+Covered Call Calculator
