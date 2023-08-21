@@ -11,10 +11,10 @@ import CoreData
 struct ContentView: View {
     @State private var stockSymbolString = ""
     @State private var currentPriceString = ""
-    @State private var impliedVolatilityString = ""
+    @State private var impliedVolatility: Double = 0.5
     @State private var daysUntilExpirationString = ""
     @State private var riskTolerance = 0
-    let options = ["Conservative", "Moderate", "Aggressive"]
+    let options = ["Aggressive", "Moderate", "Conservative"]
     
     @State private var standardDeviation = 0.0
     @State private var conservativeStrikePrice = 0.0
@@ -28,7 +28,12 @@ struct ContentView: View {
             
             TextField("Stock Symbol", text: $stockSymbolString).padding([.leading, .bottom])
             TextField("Current Price", text: $currentPriceString).padding([.leading, .bottom])
-            TextField("Implied Volatility (between 0 and 1)", text: $impliedVolatilityString).padding([.leading, .bottom])
+            TextField("Implied Volatility (between 0 and 1)",
+                      value: $impliedVolatility,
+                      formatter: NumberFormatter.decimalFormatter)
+                .keyboardType(.decimalPad)
+                .padding([.leading, .bottom])
+            
             TextField("Days until Expiration", text: $daysUntilExpirationString).padding([.leading, .bottom])
             Picker(selection: $riskTolerance, label: Text("Approach")) {
                 ForEach(0..<options.count, id: \.self) {
@@ -40,7 +45,6 @@ struct ContentView: View {
             Button("Compute") {
                 // my code
                 if let currentPrice = Double(currentPriceString),
-                   let impliedVolatility = Double(impliedVolatilityString),
                    let daysUntilExpiration = Double(daysUntilExpirationString) {
                     standardDeviation = currentPrice * impliedVolatility * sqrt(daysUntilExpiration / 365)
                     aggressiveStrikePrice = ceil(currentPrice)
@@ -79,17 +83,25 @@ struct ContentView: View {
                 }.padding()
             }
             
-            if computed && (currentPriceString.isEmpty || impliedVolatilityString.isEmpty || daysUntilExpirationString.isEmpty) {
+            if computed && (currentPriceString.isEmpty || daysUntilExpirationString.isEmpty) {
                 Text("Invalid input").foregroundColor(.red)
             }
-            
-            
             
         }
     }
 }
 
-
+extension NumberFormatter {
+    static let decimalFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 2
+            formatter.maximum = 1
+            formatter.minimum = 0
+            return formatter
+        }()
+}
 
 
 
