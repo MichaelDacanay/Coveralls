@@ -6,13 +6,16 @@
 //
 
 import SwiftUI
+import Combine
 import CoreData
 
 struct ContentView: View {
     @State private var stockSymbolString = ""
     @State private var currentPriceString = ""
     @State private var impliedVolatility: Double = 0.5
-    @State private var daysUntilExpirationString = ""
+//    @State private var daysUntilExpirationString = ""
+    @State private var daysUntilExpiration: Int = 14
+    @State private var expirationDate = Date()
     @State private var riskTolerance = 0
     let options = ["Aggressive", "Moderate", "Conservative"]
     
@@ -27,14 +30,52 @@ struct ContentView: View {
             Image("512x512px_covers_title").resizable().frame(width: 200, height: 200)
             
             TextField("Stock Symbol", text: $stockSymbolString).padding([.leading, .bottom])
-            TextField("Current Price", text: $currentPriceString).padding([.leading, .bottom])
-            TextField("Implied Volatility (between 0 and 1)",
-                      value: $impliedVolatility,
-                      formatter: NumberFormatter.decimalFormatter)
-                .keyboardType(.decimalPad)
-                .padding([.leading, .bottom])
+            HStack {
+                Text("Current price:")
+                    .font(.callout)
+                    .bold()
+                TextField("In USD", text: $currentPriceString)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }.padding([.leading, .bottom])
             
-            TextField("Days until Expiration", text: $daysUntilExpirationString).padding([.leading, .bottom])
+            HStack {
+                Text("Implied volatility:")
+                    .font(.callout)
+                    .bold()
+                TextField("between 0 and 1",
+                          value: $impliedVolatility,
+                          formatter: NumberFormatter.decimalFormatter)
+                    .keyboardType(.decimalPad)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }.padding([.leading, .bottom])
+            
+            
+            // date
+            Group {
+                HStack {
+                    Text("Days until expiration:")
+                        .font(.callout)
+                        .bold()
+                    TextField("Or select expiration date",
+                              value: $daysUntilExpiration,
+                              formatter: NumberFormatter())
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }.padding([.leading, .bottom])
+                
+                DatePicker("Exp date",
+                           selection: $expirationDate,
+                           displayedComponents: .date)
+                    .onReceive(Just(expirationDate)) { date in
+                                        print("Selected date: \(date)")
+                                        print("Today's date: \(Date())")
+                                        
+                        // Run your Swift code here
+                        daysUntilExpiration = Int(Double(expirationDate - Date()) / 86400)
+                                        print("difference: \(daysUntilExpiration)")
+                }.padding([.leading, .bottom, .trailing])
+            }
+            
+            // approach
             Picker(selection: $riskTolerance, label: Text("Approach")) {
                 ForEach(0..<options.count, id: \.self) {
                     Text(self.options[$0])
@@ -44,9 +85,8 @@ struct ContentView: View {
             
             Button("Compute") {
                 // my code
-                if let currentPrice = Double(currentPriceString),
-                   let daysUntilExpiration = Double(daysUntilExpirationString) {
-                    standardDeviation = currentPrice * impliedVolatility * sqrt(daysUntilExpiration / 365)
+                if let currentPrice = Double(currentPriceString) {
+                    standardDeviation = currentPrice * impliedVolatility * sqrt(Double(daysUntilExpiration) / 365)
                     aggressiveStrikePrice = ceil(currentPrice)
                     moderateStrikePrice = currentPrice + standardDeviation
                     conservativeStrikePrice = currentPrice + 1.282 * standardDeviation
@@ -83,7 +123,7 @@ struct ContentView: View {
                 }.padding()
             }
             
-            if computed && (currentPriceString.isEmpty || daysUntilExpirationString.isEmpty) {
+            if computed && currentPriceString.isEmpty {
                 Text("Invalid input").foregroundColor(.red)
             }
             
@@ -101,6 +141,12 @@ extension NumberFormatter {
             formatter.minimum = 0
             return formatter
         }()
+}
+
+extension Date {
+    static func - (lhs: Date, rhs: Date) -> TimeInterval {
+        return lhs.timeIntervalSinceReferenceDate - rhs.timeIntervalSinceReferenceDate
+    }
 }
 
 
